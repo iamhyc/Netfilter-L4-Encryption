@@ -16,7 +16,7 @@
 MODULE_LICENSE("GPL");  
 MODULE_AUTHOR("Mark-PC");  
   
-static struct nf_hook_ops nfho;  
+static struct nf_hook_ops nfho; 
   
 unsigned int hook_func(unsigned int hooknum,  
                        struct sk_buff *skb,  
