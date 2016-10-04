@@ -32,7 +32,7 @@ unsigned int nf_hookfn_in(void *priv,
 			       const struct nf_hook_state *state)
 {
 	char *data = NULL;
-	unsigned long data_len;
+	__u16 data_len;
 	struct iphdr *iph = NULL;
 
 	if(skb == NULL) {
@@ -47,10 +47,10 @@ unsigned int nf_hookfn_in(void *priv,
 	}
 
 	data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
-	memcpy(data, iph, data_len);
-	printk("data content: %s\n", data);
-	//data = ntohs(data);
-	//printk("data content(reverse): %s\n", data);
+	char* data_origin = skb->head + skb->network_header\
+						+ iph->ihl * 4;
+	memcpy(data, data_origin, data_len);
+	//printk("data content: %s\n", data);
 
 	return NF_ACCEPT;
 }
