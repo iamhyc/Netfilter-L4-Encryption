@@ -1,0 +1,1 @@
+cmd_/home/mark/MyModule/AESHookMod.ko := ld -r -m elf_x86_64 -T /usr/src/linux-headers-4.4.0-2-deepin-common/scripts/module-common.lds --build-id  -o /home/mark/MyModule/AESHookMod.ko /home/mark/MyModule/AESHookMod.o /home/mark/MyModule/AESHookMod.mod.o
