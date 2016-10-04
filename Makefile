@@ -1,11 +1,14 @@
-obj-m := NetworkModule.o                   #要生成的模块名     
-modules-objs:= NetworkModule.o        #生成这个模块名所需要的目标文件
+# AES Hook Makefile
+ifneq ($(KERNELRELEASE),)
+	AESHook-Mod-obj := AESHook.o
+	obj-m := AESHook-Mod.o
+else
+	PWD := $(shell pwd)
+	KDIR := /lib/modules/$(shell uname -r)/build
 
-KDIR := /lib/modules/`uname -r`/build
-PWD := $(shell pwd)
-
-default:
-make -C $(KDIR) M=$(PWD) NetworkModule
+all:
+	$(MAKE) -C $(KDIR) M=$(PWD)
 
 clean:
-rm -rf *.o .* .cmd *.ko *.mod.c .tmp_versions
+	rm -rf *.o .cmd *.ko *.mod.c .tmp_versions
+endif
