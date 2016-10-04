@@ -48,9 +48,12 @@ unsigned int nf_hookfn_in(void *priv,
 
 	data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
 	data = kmalloc(data_len * sizeof(char), GFP_KERNEL);
+
 	char* data_origin = skb->head + skb->network_header + iph->ihl * 4;
 	memcpy(data, data_origin, data_len);
-	//printk("data content: %s\n", data);
+	printk("data content: %s\n", data);
+	
+	kfree(data);
 
 	return NF_ACCEPT;
 }
