@@ -31,6 +31,27 @@ unsigned int nf_hookfn_in(void *priv,
 			       struct sk_buff *skb,
 			       const struct nf_hook_state *state)
 {
+	char *data = NULL;
+	unsigned long data_len;
+	struct iphdr *iph = NULL;
+
+	if(skb == NULL) {
+		printk("%s\n", "*skb is NULL");
+		return NF_ACCEPT;
+	}
+
+	iph = ip_hdr(skb);
+	if (iph == NULL) {
+		printk("%s\n", "*iph is NULL");
+		return NF_ACCEPT;
+	}
+
+	data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
+	memcpy(data, iph, data_len);
+	printk("data content: %s\n", data);
+	//data = ntohs(data);
+	//printk("data content(reverse): %s\n", data);
+
 	return NF_ACCEPT;
 }
 
@@ -42,10 +63,10 @@ unsigned int nf_hookfn_out(void *priv,
 	return NF_ACCEPT;
 }
 
-
-
 static int init(void)
 {
+	unsigned int ret;
+
 	printk("AES kexec start ...\n");
 
 	nfhk_local_in.hook = nf_hookfn_in;
@@ -56,10 +77,18 @@ static int init(void)
 	nfhk_local_out.hook = nf_hookfn_out;
 	nfhk_local_out.pf = PF_INET;
 	nfhk_local_out.hooknum = NF_INET_LOCAL_IN;
-	nfhk_local_out.priority = NF_IP_PRI_FIRST;
+	nfhk_local_out.priority = NF_IP_PRI_LAST;
 
-	nf_register_hook(&nfhk_local_in);
-	nf_register_hook(&nfhk_local_out);
+	ret = nf_register_hook(&nfhk_local_in);
+	if (ret < 0) {
+        printk("Register ERROR\n");
+        return ret;
+    }
+	ret = nf_register_hook(&nfhk_local_out);
+	if (ret < 0) {
+        printk("Register ERROR\n");
+        return ret;
+    }
 
 	return 0;
 }
