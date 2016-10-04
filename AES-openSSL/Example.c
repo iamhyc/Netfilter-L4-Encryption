@@ -1,81 +1,107 @@
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <openssl/aes.h>
-#define AES_BITS 128
-#define MSG_LEN 128
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/crypto.h>
+#include <linux/scatterlist.h>
+#include <linux/gfp.h>
+#include <linux/err.h>
+#include <linux/syscalls.h>
+#include <linux/slab.h>
+#include <linux/highmem.h>
 
-int aes_encrypt(char* in, char* key, char* out)//, int olen)可能会设置buf长度
-{
-    if(!in || !key || !out) return 0;
-    unsigned char iv[AES_BLOCK_SIZE];//加密的初始化向量
-    for(int i=0; i<AES_BLOCK_SIZE; ++i)//iv一般设置为全0,可以设置其他，但是加密解密要一样就行
-    	iv[i]=0;
-    AES_KEY aes;
-    if(AES_set_encrypt_key((unsigned char*)key, 128, &aes) < 0)
-    {
-        return 0;
-    }
-    int len=strlen(in);//这里的长度是char*in的长度，但是如果in中间包含'\0'字符的话
+struct crypto_tfm *tfm;
+#if 1
+char *code = "Hello everyone,I'm Richardhesidu"
+        "Hello everyone,I'm Richardhesidu"
+            "Hello everyone,I'm Richardhesidu";
 
-    //那么就只会加密前面'\0'前面的一段，所以，这个len可以作为参数传进来，记录in的长度
+char *key = "00112233445566778899aabbccddeeff";
+#endif
 
-    //至于解密也是一个道理，光以'\0'来判断字符串长度，确有不妥，后面都是一个道理。
-    AES_cbc_encrypt((unsigned char*)in, (unsigned char*)out, len, &aes, iv, AES_ENCRYPT);
-    return 1;
-}
-int aes_decrypt(char* in, char* key, char* out)
-{
-    if(!in || !key || !out) return 0;
-    unsigned char iv[AES_BLOCK_SIZE];//加密的初始化向量
-    for(int i=0; i<AES_BLOCK_SIZE; ++i)//iv一般设置为全0,可以设置其他，但是加密解密要一样就行
-    	iv[i]=0;
-    AES_KEY aes;
-    if(AES_set_decrypt_key((unsigned char*)key, 128, &aes) < 0)
-    {
-        return 0;
-    }
-    int len=strlen(in);
-    AES_cbc_encrypt((unsigned char*)in, (unsigned char*)out, len, &aes, iv, AES_DECRYPT);
-    return 1;
+#if 0
+char code[] = {0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,
+        0xbb,0xcc,0xdd,0xee,0xff};
+char key[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,
+        0x0b,0x0c,0x0d,0x0e,0x0f};
+#endif
+
+static inline  void hexdump(unsigned char *buf,unsigned int len) {
+    while(len--)
+        printk("%02x",*buf++);
+    printk("\n");
 }
 
-int main(int argc,char *argv[])
-{
-    char sourceStringTemp[MSG_LEN];
-    char dstStringTemp[MSG_LEN];
-    memset((char*)sourceStringTemp, 0 ,MSG_LEN);
-    memset((char*)dstStringTemp, 0 ,MSG_LEN);
-    strcpy((char*)sourceStringTemp, "123456789 123456789 123456789 12a");
-    //strcpy((char*)sourceStringTemp, argv[1]);
+static int __init test_init(void) {
+    int ret,templen,keylen,codelen;
+    struct scatterlist sg[1];
+    char *result;
+    char *temp;
 
-    char key[AES_BLOCK_SIZE];
-    int i;
-    for(i = 0; i < 16; i++)//可自由设置密钥
-    {
-        key[i] = 32 + i;
+    keylen = 16;
+    codelen = strlen(code)/2;
+#if 0
+    printk("<1>%s, codelen=%d\n",code,strlen(code));
+    printk("<1>%s, keylen=%d\n",key,strlen(key));    
+#endif    
+    /* Allocate transform for AES ECB mode */
+            
+    tfm = crypto_alloc_tfm("aes",CRYPTO_TFM_MODE_ECB);
+        if(IS_ERR(tfm)) {
+        printk("<1>failed to load transform for aes ECB mode !\n");
+                return 0;
     }
-    if(!aes_encrypt(sourceStringTemp,key,dstStringTemp))
-    {
-    	printf("encrypt error\n");
-    	return -1;
+
+    ret = crypto_cipher_setkey(tfm,key,keylen);
+    if(ret) {
+        printk("<1>failed to setkey \n");
+        goto failed1;
+    } 
+    
+    sg_init_one(sg,code,codelen);
+        
+    /* start encrypt */
+    
+    ret = crypto_cipher_encrypt(tfm,sg,sg,codelen);
+    if(ret) {
+        printk("<1>encrypt failed \n");
+        goto failed1;
     }
-    printf("enc %d:",strlen((char*)dstStringTemp));
-    for(i= 0;dstStringTemp[i];i+=1){
-        printf("%x",(unsigned char)dstStringTemp[i]);
-    }
-    memset((char*)sourceStringTemp, 0 ,MSG_LEN);
-    if(!aes_decrypt(dstStringTemp,key,sourceStringTemp))
-    {
-    	printf("decrypt error\n");
-    	return -1;
-    }
-    printf("\n");
-    printf("dec %d:",strlen((char*)sourceStringTemp));
-    printf("%s\n",sourceStringTemp);
-    for(i= 0;sourceStringTemp[i];i+=1){
-        printf("%x",(unsigned char)sourceStringTemp[i]);
-    }
-    printf("\n");
+    
+    temp = kmap(sg[0].page) + sg[0].offset;
+
+    hexdump(temp,sg[0].length);
+    
+          /* start dencrypt */
+    templen = strlen(temp)/2;
+    sg_init_one(sg,temp,templen);
+    ret = crypto_cipher_decrypt(tfm,sg,sg,templen);
+        if(ret) {
+                printk("<1>dencrypt failed \n");
+                goto failed1;
+        }
+
+        result = kmap(sg[0].page) + sg[0].offset;
+    printk("<1>%s\n",result);
+//        hexdump(result,sg[0].length);
+
+
+#if 0
+    if(memcmp(code,result,strlen(code)) != 0)
+        printk("<1>dencrpt was not successful\n");
+    else
+        printk("<1>dencrypt was successful\n");
+#endif
+failed1:
+           crypto_free_tfm(tfm);
     return 0;
 }
+
+static void __exit test_exit(void)
+{
+
+}
+
+module_init(test_init);
+module_exit(test_exit);
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("richardhesidu@chinaunix");
