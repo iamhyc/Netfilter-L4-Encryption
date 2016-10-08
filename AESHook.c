@@ -31,8 +31,9 @@ unsigned int nf_hookfn_in(void *priv,
 			       struct sk_buff *skb,
 			       const struct nf_hook_state *state)
 {
-	char *data = NULL;
 	__u16 data_len;
+	char *data = NULL;
+	char* data_origin;
 	struct iphdr *iph = NULL;
 
 	if(skb == NULL) {
@@ -49,9 +50,10 @@ unsigned int nf_hookfn_in(void *priv,
 	data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
 	data = kmalloc(data_len * sizeof(char), GFP_KERNEL);
 
-	char* data_origin = skb->head + skb->network_header + iph->ihl * 4;
+	data_origin = skb->head + skb->network_header + iph->ihl * 4;
 	memcpy(data, data_origin, data_len);
-	printk("data content: %s\n", data);
+	printkHex(data, data_len);
+	//printk("data content: %s\n", data);
 	
 	kfree(data);
 
@@ -64,6 +66,15 @@ unsigned int nf_hookfn_out(void *priv,
 			       const struct nf_hook_state *state)
 {
 	return NF_ACCEPT;
+}
+
+void printkHex(char *data, int data_len) {
+	//static const char *hex = "0123456789ABCDEF";
+	printk("Data Content: ");
+	for (int i = 0; i < data_len; i ++) {
+		printk("%2x ", data[i]);
+	}
+	printk("\n");
 }
 
 static int init(void)
