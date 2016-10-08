@@ -27,6 +27,8 @@ MODULE_AUTHOR("Mark-PC");
 static struct nf_hook_ops nfhk_local_in;
 static struct nf_hook_ops nfhk_local_out;
 
+struct crypto_tfm *tfm;
+
 unsigned int nf_hookfn_in(void *priv,
 			       struct sk_buff *skb,
 			       const struct nf_hook_state *state)
@@ -52,8 +54,8 @@ unsigned int nf_hookfn_in(void *priv,
 
 	data_origin = skb->head + skb->network_header + iph->ihl * 4;
 	memcpy(data, data_origin, data_len);
-	printkHex(data, data_len);
-	//printk("data content: %s\n", data);
+	printkHex(data, data_len, "INPUT");
+	
 	
 	kfree(data);
 
@@ -65,14 +67,40 @@ unsigned int nf_hookfn_out(void *priv,
 			       struct sk_buff *skb,
 			       const struct nf_hook_state *state)
 {
+	__u16 data_len;
+	char *data = NULL;
+	char* data_origin;
+	struct iphdr *iph = NULL;
+
+	if(skb == NULL) {
+		printk("%s\n", "*skb is NULL");
+		return NF_ACCEPT;
+	}
+
+	iph = ip_hdr(skb);
+	if (iph == NULL) {
+		printk("%s\n", "*iph is NULL");
+		return NF_ACCEPT;
+	}
+
+	data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
+	data = kmalloc(data_len * sizeof(char), GFP_KERNEL);
+
+	data_origin = skb->head + skb->network_header + iph->ihl * 4;
+	memcpy(data, data_origin, data_len);
+	printkHex(data, data_len, "OUTPUT");
+	
+	
+	kfree(data);
+
 	return NF_ACCEPT;
 }
 
-void printkHex(char *data, int data_len) {
-	//static const char *hex = "0123456789ABCDEF";
-	printk("Data Content: ");
-	for (int i = 0; i < data_len; i ++) {
-		printk("%2x ", data[i]);
+void printkHex(char *data, int data_len, char* netmark) {
+	int i = 0;
+	printk("[%s]length=%d;Data Content: ", netmark, data_len);
+	for (i = 0; i < data_len; i ++) {
+		printk("%2x ", data[i] & 0xFF);
 	}
 	printk("\n");
 }
