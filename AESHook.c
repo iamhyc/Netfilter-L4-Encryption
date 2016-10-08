@@ -18,10 +18,11 @@
 #include <linux/tcp.h>
 #include <linux/icmp.h>
 //Crypto Reference
+#include <crypto/ahash.h>
 #include <linux/crypto.h>
 #include <linux/scatterlist.h>
 #include <linux/gfp.h>
-#include <linux/syscalls.h>
+#include <linux/err.h>
 #include <linux/slab.h>
 #include <linux/highmem.h>
 //User Reference
