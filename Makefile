@@ -10,7 +10,7 @@ all:
 	$(MAKE) -C $(KDIR) M=$(PWD)
 
 clean:
-	rm -f .built-in.o.cmd .AESHook*
+	rm -f .built-in.o.cmd .aes_method.o.cmd .AESHook*
 	rm -f *.o *.o.cmd *.ko *.mod.c *.symvers *.order
 	rm -rf .tmp_versions
 endif

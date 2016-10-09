@@ -1,4 +1,6 @@
 
+#include <linux/string.h>
+
 #include "aes_method.h"
 
 static const char *aes_key = "00112233445566778899aabbccddeeff";
