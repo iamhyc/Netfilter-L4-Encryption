@@ -19,7 +19,18 @@ Source Address of Header of L3
 	skb->nh.iph->protocol == IPPROTO_TCP
 
 	skb->nh.iph->protocol == IPPROTO_UDP
-3. re-generate the *checksum* of IPv4 with *ip_fast_csum(\* iph, int ihl)*
+3. re-generate the *checksum* of IPv4 with *ip_fast_csum(iphdr \*, int ihl)*
 
 4. kernel supported *linux/crypto.h* for encryption
 
+##TODO
+
++ Asynchronous encyrption adding *waitting completion*
+
++ Encryption verified, *skb_push* verified
+
++ IPv4 checksum re-calculate
+
++ Decryption suite
+
++ IP Allow List && Changable AES_KEY
