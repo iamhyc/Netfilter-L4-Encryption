@@ -6,18 +6,35 @@
 
 #include <linux/skbuff.h>
 
+
 //Crypto Reference
-#include <linux/crypto.h>
+#include <crypto/aead.h>
 #include <crypto/skcipher.h>
-#include <linux/scatterlist.h>
-#include <linux/slab.h>
-#include <linux/gfp.h>
 #include <linux/err.h>
-#include <linux/highmem.h>
+#include <linux/fips.h>
+#include <linux/gfp.h>
+#include <linux/scatterlist.h>
+#include <linux/string.h>
 #include <linux/jiffies.h>
+#include <linux/timex.h>
+#include <linux/interrupt.h>
+#include <linux/highmem.h>
+
+struct tcrypt_result {
+	struct completion completion;
+	int err;
+};
+
+/* tie all data structures together */
+struct skcipher_def {
+	struct scatterlist sg;
+	struct crypto_skcipher *tfm;
+	struct skcipher_request *req;
+	struct tcrypt_result result;
+};
+
 
 char paddingFill(char *, int);
-
-void aes_crypto_cipher(struct sk_buff *, char *, __u16, int);
+int aes_crypto_cipher(struct sk_buff *, char *, __u16, int);
 
 #endif

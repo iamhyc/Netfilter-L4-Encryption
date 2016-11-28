@@ -41,7 +41,7 @@ unsigned int nf_hookfn_in(void *priv,
 			       const struct nf_hook_state *state)
 {
 	__u16 data_len;
-	char *data, *data_tmp = NULL;
+	char *data = NULL;
 	char* data_origin;
 	struct iphdr *iph = NULL;
 
@@ -63,11 +63,12 @@ unsigned int nf_hookfn_in(void *priv,
 	//Get Original L3 payload
 	data_origin = skb->head + skb->network_header + iph->ihl * 4;
 	memcpy(data, data_origin, data_len);
-	printkHex(data, data_len, "ORIGIN_INPUT");
+	printkHex(data, data_len, "ORIGIN\tINPUT");
 
-	//Encryption function
-	//aes_crypto_cipher(skb, data, data_len, ENCRYPTION);
+	/* Encryption function */
+	//aes_crypto_cipher(skb, data, data_len, DECRYPTION);
 	
+	memcpy(data_origin, data, data_len);
 	kfree(data);
 
 	return NF_ACCEPT;
@@ -83,7 +84,7 @@ unsigned int nf_hookfn_out(void *priv,
 			       const struct nf_hook_state *state)
 {
 	__u16 data_len;
-	char *data, *data_tmp = NULL;
+	char *data = NULL;
 	char* data_origin;
 	struct iphdr *iph = NULL;
 
@@ -104,11 +105,12 @@ unsigned int nf_hookfn_out(void *priv,
 	//Get Original L3 payload
 	data_origin = skb->head + skb->network_header + iph->ihl * 4;
 	memcpy(data, data_origin, data_len);
-	printkHex(data, data_len, "ORIGIN_OUTPUT");
+	printkHex(data, data_len, "ORIGIN\tOUTPUT");
 
-	//Decryption function
-	//aes_crypto_cipher(skb, data, data_len, DECRYPTION);
+	/* Encryption function */
+	aes_crypto_cipher(skb, data, data_len, ENCRYPTION);
 
+	memcpy(data_origin, data, data_len);
 	kfree(data);
 
 	return NF_ACCEPT;
