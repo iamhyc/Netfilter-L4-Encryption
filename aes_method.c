@@ -64,8 +64,8 @@ int aes_crypto_cipher(struct sk_buff *skb,
 	char *ivdata = NULL;
 	unsigned char key[32];
 	int ret = -EFAULT;
-	//int padding_len = 0;
-	
+	int padding_len = 0;
+
 	//allocate skcipher handle
 	skcipher = crypto_alloc_skcipher("cbc-aes-aesni", 0, 0);
 	if (IS_ERR(skcipher)) {
@@ -101,11 +101,12 @@ int aes_crypto_cipher(struct sk_buff *skb,
 	get_random_bytes(ivdata, 16);
 
 	/* padding with Input data*/
-	/*padding_len = paddingFill(data, data_len);
+	padding_len = paddingFill(data, data_len);
 	if(padding_len) {
 		skb_push(skb, padding_len);
 		data_len += padding_len;
-	}*/
+	}
+
 	/* Input data will be random */
 	scratchpad = kmalloc(16, GFP_KERNEL);
 	if (!scratchpad) {
