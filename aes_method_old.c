@@ -10,51 +10,6 @@
 static unsigned int test_skcipher_encdec(struct skcipher_def *sk, int enc);
 static void test_skcipher_cb(struct crypto_async_request *req, int error);
 
-/* Callback function */
-static void test_skcipher_cb(struct crypto_async_request *req, int error)
-{
-	struct tcrypt_result *result = req->data;
-
-	if (error == -EINPROGRESS)
-		return;
-	result->err = error;
-	complete(&result->completion);
-	pr_info("Encryption finished successfully\n");
-}
-
-/* Perform cipher operation */
-static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
-					 int enc)
-{
-	int rc = 0;
-
-	if (enc)
-		rc = crypto_skcipher_encrypt(sk->req);
-	else
-		rc = crypto_skcipher_decrypt(sk->req);
-
-	switch (rc) {
-	case 0:
-		break;
-	case -EINPROGRESS:
-	case -EBUSY:
-		rc = wait_for_completion_interruptible(
-			&sk->result.completion);
-		if (!rc && !sk->result.err) {
-			reinit_completion(&sk->result.completion);
-			break;
-		}
-	default:
-		pr_info("skcipher encrypt returned with %d result %d\n",
-			rc, sk->result.err);
-		break;
-	}
-	init_completion(&sk->result.completion);
-
-	return rc;
-}
-
-/* Initialize and trigger cipher operation */
 int aes_crypto_cipher(struct sk_buff *skb, 
 						char* data, __u16 data_len,
 						int enc) {
@@ -130,4 +85,62 @@ out:
 	if (scratchpad)
 		kfree(scratchpad);
 	return ret;
+}
+
+char paddingFill(char *data, int data_len) {
+	char tmp_len = 0;
+	char *data_tmp = NULL;
+
+	tmp_len = (char)(16 - data_len % 16)/2;
+
+	if(tmp_len != 0) {
+		data_tmp = kmalloc((data_len + tmp_len)* sizeof(char), GFP_KERNEL);
+		memset(data_tmp, 0, data_len + tmp_len);//padding with 0
+		data_tmp[data_len + tmp_len] = tmp_len;//ANSI X.923 padding
+		memcpy(data_tmp, data, data_len);//copy original data
+		kfree(data);
+		data = data_tmp;
+	}
+
+	return tmp_len;
+}
+
+/* Perform cipher operation */
+static unsigned int test_skcipher_encdec(struct skcipher_def *sk,int enc)
+{
+	int rc = 0;
+
+	if (enc)
+		rc = crypto_skcipher_encrypt(sk->req);
+	else
+		rc = crypto_skcipher_decrypt(sk->req);
+
+	switch (rc) {
+	case 0:
+		break;
+	case -EINPROGRESS:
+	case -EBUSY:
+		rc = wait_for_completion_interruptible(&sk->result.completion);
+		if (!rc && !sk->result.err) {
+			reinit_completion(&sk->result.completion);
+			break;
+		}
+	default:
+		//pr_info("skcipher encrypt returned with %d result %d\n",rc, sk->result.err);
+		break;
+	}
+	init_completion(&sk->result.completion);
+
+	return rc;
+}
+
+/* Callback function */
+static void test_skcipher_cb(struct crypto_async_request *req, int error)
+{
+	struct tcrypt_result *result = req->data;
+
+	if (error == -EINPROGRESS)
+		return;
+	result->err = error;
+	complete(&result->completion);
 }
