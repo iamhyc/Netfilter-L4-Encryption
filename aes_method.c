@@ -102,8 +102,9 @@ int aes_crypto_cipher(struct sk_buff *skb,
 
 	/* padding with Input data*/
 	padding_len = paddingFill(data, data_len);
+	printk("%d\n", padding_len);
 	if(padding_len) {
-		skb_push(skb, padding_len);
+		//skb_push(skb, padding_len);
 		data_len += padding_len;
 	}
 
@@ -145,13 +146,15 @@ char paddingFill(char *data, int data_len) {
 	char *data_tmp = NULL;
 
 	tmp_len = (char)(16 - data_len % 16)/2;
-
+	printk("%s%d\n", "tmp_len:", tmp_len);
 	if(tmp_len != 0) {
 		data_tmp = kmalloc((data_len + tmp_len)* sizeof(char), GFP_KERNEL);
 		memset(data_tmp, 0, data_len + tmp_len);//padding with 0
+		printk("%s\n", "Allocated");
 		data_tmp[data_len + tmp_len] = tmp_len;//ANSI X.923 padding
 		memcpy(data_tmp, data, data_len);//copy original data
 		kfree(data);
+		data = NULL;
 		data = data_tmp;
 	}
 
