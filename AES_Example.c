@@ -1,15 +1,14 @@
-struct tcrypt_result {
-	struct completion completion;
-	int err;
-};
 
-/* tie all data structures together */
-struct skcipher_def {
-	struct scatterlist sg;
-	struct crypto_skcipher *tfm;
-	struct skcipher_request *req;
-	struct tcrypt_result result;
-};
+#include <linux/string.h>
+#include "aes_method.h"
+
+/*
+
+*/
+
+/***************proto define***************/
+static unsigned int test_skcipher_encdec(struct skcipher_def *sk, int enc);
+static void test_skcipher_cb(struct crypto_async_request *req, int error);
 
 /* Callback function */
 static void test_skcipher_cb(struct crypto_async_request *req, int error)
@@ -56,8 +55,9 @@ static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
 }
 
 /* Initialize and trigger cipher operation */
-static int test_skcipher(void)
-{
+int aes_crypto_cipher(struct sk_buff *skb, 
+						char* data, __u16 data_len,
+						int enc) {
 	struct skcipher_def sk;
 	struct crypto_skcipher *skcipher = NULL;
 	struct skcipher_request *req = NULL;
