@@ -65,23 +65,22 @@ int aes_crypto_cipher(struct sk_buff *skb,
 	char *ivdata = NULL;
 	unsigned char key[32];
 	int ret = -EFAULT;
-	int padding_len = 0;
-	//allocate skcipher handle
+
 	skcipher = crypto_alloc_skcipher("cbc-aes-aesni", 0, 0);
 	if (IS_ERR(skcipher)) {
 		pr_info("could not allocate skcipher handle\n");
 		return PTR_ERR(skcipher);
 	}
-	//allocate skcipher request
+
 	req = skcipher_request_alloc(skcipher, GFP_KERNEL);
 	if (!req) {
 		pr_info("could not allocate skcipher request\n");
 		ret = -ENOMEM;
 		goto out;
 	}
-	//set callback for request
-	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG, \
-				      test_skcipher_cb, \
+
+	skcipher_request_set_callback(req, CRYPTO_TFM_REQ_MAY_BACKLOG,
+				      test_skcipher_cb,
 				      &sk.result);
 
 	/* AES 256 with random key */
@@ -100,12 +99,13 @@ int aes_crypto_cipher(struct sk_buff *skb,
 	}
 	get_random_bytes(ivdata, 16);
 
-	/* padding with Input data*/
-	padding_len = paddingFill(data, data_len);
-	if(padding_len) {
-		skb_push(skb, padding_len);
-		data_len += padding_len;
+	/* Input data will be random */
+	scratchpad = kmalloc(16, GFP_KERNEL);
+	if (!scratchpad) {
+		pr_info("could not allocate scratchpad\n");
+		goto out;
 	}
+	get_random_bytes(scratchpad, 16);
 
 	sk.tfm = skcipher;
 	sk.req = req;
@@ -116,9 +116,11 @@ int aes_crypto_cipher(struct sk_buff *skb,
 	init_completion(&sk.result.completion);
 
 	/* encrypt data */
-	ret = test_skcipher_encdec(&sk, enc);
+	ret = test_skcipher_encdec(&sk, 1);
 	if (ret)
 		goto out;
+
+	pr_info("Encryption triggered successfully\n");
 
 out:
 	if (skcipher)
