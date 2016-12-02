@@ -34,6 +34,23 @@ static struct nf_hook_ops nfhk_local_out;
 /**
   * @brief  
   * @param  
+  * @retval 
+  */
+char paddingFill(int data_len) {
+	char tmp_len = 0;
+
+	tmp_len = data_len % 16;
+	if(tmp_len != 0) {
+		tmp_len = (char)((16 - tmp_len)/8);//0 or 1
+		tmp_len ++;//1 or 2 to cover
+	}
+
+	return tmp_len;
+}
+
+/**
+  * @brief  
+  * @param  
   * @retval uint16_t, the length of '*data' pointer(in bit)
   */
 unsigned int nf_hookfn_in(void *priv,
@@ -84,6 +101,7 @@ unsigned int nf_hookfn_out(void *priv,
 			       const struct nf_hook_state *state)
 {
 	__u16 data_len;
+	char padding_len;
 	char *data = NULL;
 	char* data_origin;
 	struct iphdr *iph = NULL;
@@ -100,10 +118,13 @@ unsigned int nf_hookfn_out(void *priv,
 	}
 
 	data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
-	data = kmalloc(data_len * sizeof(char), GFP_KERNEL);
+	padding_len = paddingFill(data_len);
+	data = kmalloc((padding_len+data_len) * sizeof(char), GFP_KERNEL);
 
 	//Get Original L3 payload
 	data_origin = skb->head + skb->network_header + iph->ihl * 4;
+	memset(data, 0, (data_len+padding_len));//padding with 0
+	data[data_len + padding_len - 1] = padding_len;//ANSI X.923 format
 	memcpy(data, data_origin, data_len);
 	printkHex(data, data_len, "ORIGIN\tOUTPUT");
 

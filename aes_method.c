@@ -64,7 +64,6 @@ int aes_crypto_cipher(struct sk_buff *skb,
 	char *ivdata = NULL;
 	unsigned char key[32];
 	int ret = -EFAULT;
-	int padding_len = 0;
 
 	//allocate skcipher handle
 	skcipher = crypto_alloc_skcipher("cbc-aes-aesni", 0, 0);
@@ -100,12 +99,7 @@ int aes_crypto_cipher(struct sk_buff *skb,
 	}
 	get_random_bytes(ivdata, 16);
 
-	/* padding with Input data*/
-	padding_len = paddingFill(data, data_len);
-	if(padding_len) {
-		//skb_push(skb, padding_len);
-		data_len += padding_len;
-	}
+	/* get ready with Input data*/
 
 	/* Input data will be random */
 	scratchpad = kmalloc(16, GFP_KERNEL);
@@ -138,26 +132,4 @@ out:
 	if (scratchpad)
 		kfree(scratchpad);
 	return ret;
-}
-
-char paddingFill(char *data, int data_len) {
-	char tmp_len = 0;
-	char *data_tmp = NULL;
-
-	tmp_len = data_len % 16;
-	if(tmp_len != 0) {
-		tmp_len = (char)((16 - tmp_len)/8);//0 or 1
-		tmp_len ++;//1 or 2 to cover
-		printk("%s%d\n", "tmp_len:", tmp_len);
-		data_tmp = kmalloc((data_len + tmp_len)* sizeof(char), GFP_KERNEL);
-		memset(data_tmp, 0, data_len + tmp_len);//padding with 0
-		data_tmp[data_len + tmp_len - 1] = tmp_len;//ANSI X.923 padding
-		memcpy(data_tmp, data, data_len);//copy original data
-		printk("%s\n", "Allocated");
-		//kfree(data);
-		//data = NULL;
-		//data = data_tmp;
-	}
-
-	return tmp_len;
 }
