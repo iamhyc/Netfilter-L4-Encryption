@@ -62,7 +62,7 @@ int aes_crypto_cipher(	char* data, __u16 data_len,
 	struct skcipher_request *req = NULL;
 	char *ivdata = NULL;
 	unsigned char key[32];
-	int ret = -EFAULT;
+	int ret = -EFAULT, i;
 
 	//allocate skcipher handle
 	skcipher = crypto_alloc_skcipher("cbc-aes-aesni", 0, 0);
@@ -103,16 +103,17 @@ int aes_crypto_cipher(	char* data, __u16 data_len,
 	sk.tfm = skcipher;
 	sk.req = req;
 
-	/* We encrypt one block */
-	sg_init_one(&sk.sg, data, 16);
-	skcipher_request_set_crypt(req, &sk.sg, &sk.sg, 16, ivdata);
-	init_completion(&sk.result.completion);
+	for (i = 0; i < data_len/16; i++)
+	{
+		/* We encrypt one block */
+		sg_init_one(&sk.sg, data + i*16, 16);//sg_init_table(&sgl, data_len/16);
+		skcipher_request_set_crypt(req, &sk.sg, &sk.sg, 16, ivdata);
+		init_completion(&sk.result.completion);
 
-	/* encrypt data */
-	ret = test_skcipher_encdec(&sk, enc);
-	if (ret)
-		goto out;
-
+		/* encrypt data */
+		ret = test_skcipher_encdec(&sk, enc);
+	}
+	
 out:
 	if (skcipher)
 		crypto_free_skcipher(skcipher);
