@@ -163,7 +163,11 @@ unsigned int nf_hookfn_out(void *priv,
 	memcpy(data_origin, data, (data_len+padding_len));
 	//re-checksum
 	iph->tot_len = htons(ntohs(iph->tot_len) + padding_len);//'total length' segment in IP
+	printk("ip_csum_0:%02x\n", iph->check);
+	iph->check = 0;
 	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum for IP
+	printk("ip_csum_1:%02x\n", iph->check);
+	skb->csum = 0;
 	skb->csum = skb_checksum(skb, iph->ihl*4, skb->len - iph->ihl * 4, 0);//re-checksum for skb
 	kfree(data);
 
