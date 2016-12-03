@@ -4,7 +4,7 @@
 #define srcIP "127.0.0.0"
 #define destIP "127.0.0.0"
 
-void printkHex(char *, int, char*);
+void printkHex(char *, int, int, char*);
 char paddingFill(int);
 
 #endif

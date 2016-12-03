@@ -54,9 +54,9 @@ static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
 	return rc;
 }
 
-int aes_crypto_cipher(struct sk_buff *skb, 
-						char* data, __u16 data_len,
-						int enc) {
+int aes_crypto_cipher(	char* data, __u16 data_len,
+						int enc) 
+{
 	struct skcipher_def sk;
 	struct crypto_skcipher *skcipher = NULL;
 	struct skcipher_request *req = NULL;

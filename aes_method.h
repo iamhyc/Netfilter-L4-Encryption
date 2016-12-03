@@ -33,6 +33,6 @@ struct skcipher_def {
 	struct tcrypt_result result;
 };
 
-int aes_crypto_cipher(struct sk_buff *, char *, __u16, int);
+int aes_crypto_cipher(char *, __u16, int);
 
 #endif

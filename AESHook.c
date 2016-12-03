@@ -40,10 +40,7 @@ char paddingFill(int data_len) {
 	char tmp_len = 0;
 
 	tmp_len = data_len % 16;
-	if(tmp_len != 0) {
-		tmp_len = (char)((16 - tmp_len)/8);//0 or 1
-		tmp_len ++;//1 or 2 to cover
-	}
+	tmp_len = (tmp_len==0?0:16-tmp_len);
 
 	return tmp_len;
 }
@@ -80,10 +77,10 @@ unsigned int nf_hookfn_in(void *priv,
 	//Get Original L3 payload
 	data_origin = skb->head + skb->network_header + iph->ihl * 4;
 	memcpy(data, data_origin, data_len);
-	printkHex(data, data_len, "ORIGIN\tINPUT");
+	printkHex(data, data_len, 0, "ORIGIN\tINPUT");
 
 	/* Encryption function */
-	//aes_crypto_cipher(skb, data, data_len, DECRYPTION);
+	//aes_crypto_cipher(data, data_len, DECRYPTION);
 	
 	memcpy(data_origin, data, data_len);
 	kfree(data);
@@ -117,19 +114,20 @@ unsigned int nf_hookfn_out(void *priv,
 		return NF_ACCEPT;
 	}
 
+	//pre padding allocate
 	data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
 	padding_len = paddingFill(data_len);
-	data = kmalloc((padding_len+data_len) * sizeof(char), GFP_KERNEL);
+	data = kmalloc((data_len+padding_len) * sizeof(char), GFP_KERNEL);
+	memset(data, 0, (data_len+padding_len));//padding with 0
+	data[data_len + padding_len - 1] = padding_len;//ANSI X.923 format
 
 	//Get Original L3 payload
 	data_origin = skb->head + skb->network_header + iph->ihl * 4;
-	memset(data, 0, (data_len+padding_len));//padding with 0
-	data[data_len + padding_len - 1] = padding_len;//ANSI X.923 format
 	memcpy(data, data_origin, data_len);
-	printkHex(data, data_len, "ORIGIN\tOUTPUT");
+	printkHex(data, data_len, padding_len, "ORIGIN\tOUTPUT");
 
 	/* Encryption function */
-	aes_crypto_cipher(skb, data, data_len, ENCRYPTION);
+	aes_crypto_cipher(data, data_len, ENCRYPTION);
 
 	memcpy(data_origin, data, data_len);
 	kfree(data);
@@ -141,9 +139,9 @@ unsigned int nf_hookfn_out(void *priv,
   * @brief  print in kernel with Hex data
   * @param  (char *)data pointer, (int)data length, (char *)description of data
   */
-void printkHex(char *data, int data_len, char* pt_mark) {
+void printkHex(char *data, int data_len, int padding_len, char* pt_mark) {
 	int i = 0;
-	printk("[%s]length=%d;Data Content: ", pt_mark, data_len);
+	printk("[%s]length=%d:%d;Data Content: ", pt_mark, data_len, padding_len);
 	for (i = 0; i < data_len; i ++) {
 		printk("%02x ", data[i] & 0xFF);
 	}
