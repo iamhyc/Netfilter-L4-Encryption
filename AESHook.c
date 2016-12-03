@@ -78,7 +78,6 @@ unsigned int nf_hookfn_in(void *priv,
 {
 	__u16 data_len;
 	char padding_len;
-	char *data = NULL;
 	char* data_origin;
 	struct iphdr *iph = NULL;
 
