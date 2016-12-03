@@ -108,10 +108,11 @@ unsigned int nf_hookfn_in(void *priv,
 	//memcpy(data_origin, data, (data_len - padding_len));
 	//kfree(data);
 
-	//re-checksum for IP header
+	//re-checksum
 	padding_len = padding_check(data_origin, data_len);
 	iph->tot_len = htons(ntohs(iph->tot_len) - padding_len);//remove padding from length
-	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum
+	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum for IP
+	skb->csum = skb_checksum(skb, iph->ihl*4, skb->len - iph->ihl * 4, 0);//re-checksum for skb
 	printkHex(data_origin, data_len, -padding_len, "FINAL\tINPUT");
 
 	return NF_ACCEPT;
@@ -161,10 +162,10 @@ unsigned int nf_hookfn_out(void *priv,
 	/* substitute original data */
 	skb_put(skb, padding_len);//forward from tail
 	memcpy(data_origin, data, (data_len+padding_len));
-	//re-checksum for IP segment
+	//re-checksum
 	iph->tot_len = htons(ntohs(iph->tot_len) + padding_len);//'total length' segment in IP
-	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum
-
+	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum for IP
+	skb->csum = skb_checksum(skb, iph->ihl*4, skb->len - iph->ihl * 4, 0);//re-checksum for skb
 	kfree(data);
 
 	return NF_ACCEPT;
