@@ -4,8 +4,6 @@
 #define ENCRYPTION 0x1
 #define DECRYPTION 0x0
 
-#include <linux/skbuff.h>
-
 
 //Crypto Reference
 #include <crypto/aead.h>

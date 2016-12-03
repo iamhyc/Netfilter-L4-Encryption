@@ -60,7 +60,6 @@ int aes_crypto_cipher(	char* data, __u16 data_len,
 	struct skcipher_def sk;
 	struct crypto_skcipher *skcipher = NULL;
 	struct skcipher_request *req = NULL;
-	char *scratchpad = NULL;
 	char *ivdata = NULL;
 	unsigned char key[32];
 	int ret = -EFAULT;
@@ -83,37 +82,29 @@ int aes_crypto_cipher(	char* data, __u16 data_len,
 				      test_skcipher_cb, \
 				      &sk.result);
 
-	/* AES 256 with random key */
-	get_random_bytes(&key, 32);
+	/* AES 256 with certain key */
+	memset(key, 1, 32);//FULL 'F'
+	/*get_random_bytes(&key, 32);*/
 	if (crypto_skcipher_setkey(skcipher, key, 32)) {
 		pr_info("key could not be set\n");
 		ret = -EAGAIN;
 		goto out;
 	}
 
-	/* IV will be random */
+	/* IV will be all 0 */
 	ivdata = kmalloc(16, GFP_KERNEL);
 	if (!ivdata) {
 		pr_info("could not allocate ivdata\n");
 		goto out;
 	}
-	get_random_bytes(ivdata, 16);
-
-	/* get ready with Input data*/
-
-	/* Input data will be random */
-	scratchpad = kmalloc(16, GFP_KERNEL);
-	if (!scratchpad) {
-		pr_info("could not allocate scratchpad\n");
-		goto out;
-	}
-	get_random_bytes(scratchpad, 16);
+	memset(ivdata, 0, 16);
+	/*get_random_bytes(ivdata, 16);*/
 
 	sk.tfm = skcipher;
 	sk.req = req;
 
 	/* We encrypt one block */
-	sg_init_one(&sk.sg, scratchpad, 16);
+	sg_init_one(&sk.sg, data, 16);
 	skcipher_request_set_crypt(req, &sk.sg, &sk.sg, 16, ivdata);
 	init_completion(&sk.result.completion);
 
@@ -129,7 +120,5 @@ out:
 		skcipher_request_free(req);
 	if (ivdata)
 		kfree(ivdata);
-	if (scratchpad)
-		kfree(scratchpad);
 	return ret;
 }

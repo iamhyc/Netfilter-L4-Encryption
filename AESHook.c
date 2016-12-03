@@ -36,13 +36,35 @@ static struct nf_hook_ops nfhk_local_out;
   * @param  
   * @retval 
   */
-char paddingFill(int data_len) {
+char padding_ill(int data_len) {
 	char tmp_len = 0;
 
 	tmp_len = data_len % 16;
 	tmp_len = (tmp_len==0?0:16-tmp_len);
 
 	return tmp_len;
+}
+
+/**
+  * @brief  
+  * @param  
+  * @retval 
+  */
+char padding_check(char * data, int len)
+{
+	char ex;
+	int flag = 0, i = 0;
+
+	ex = data[len - 1];
+	for (i = 0; i < ex; i++)
+	{
+		flag += data[len - i - 1];
+	}
+
+	if(flag==0)
+		return ex;
+	else
+		return 0;
 }
 
 /**
@@ -55,6 +77,7 @@ unsigned int nf_hookfn_in(void *priv,
 			       const struct nf_hook_state *state)
 {
 	__u16 data_len;
+	char padding_len;
 	char *data = NULL;
 	char* data_origin;
 	struct iphdr *iph = NULL;
@@ -70,19 +93,22 @@ unsigned int nf_hookfn_in(void *priv,
 		return NF_ACCEPT;
 	}
 
-	//allocate memory for temporary storage
+	//Get Original L3 payload, Extract data from payload
 	data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
-	data = kmalloc(data_len * sizeof(char), GFP_KERNEL);
-
-	//Get Original L3 payload
 	data_origin = skb->head + skb->network_header + iph->ihl * 4;
-	memcpy(data, data_origin, data_len);
-	printkHex(data, data_len, 0, "ORIGIN\tINPUT");
+	//printkHex(data_origin, data_len, 0, "ORIGIN\tINPUT");
+	/* Decryption function */
+	aes_crypto_cipher(data_origin, data_len, DECRYPTION);
 
-	/* Encryption function */
-	//aes_crypto_cipher(data, data_len, DECRYPTION);
-	
+	//allocate memory for data without padding
+	padding_len = padding_check(data_origin, data_len);
+	data = kmalloc((data_len - padding_len) * sizeof(char), GFP_KERNEL);
+	memcpy(data, data_origin, (data_len - padding_len));
+	//re-checksum for IP header
+	iph->tot_len = htons(ntohs(iph->tot_len) - padding_len);//remove padding from length
+	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum
 	memcpy(data_origin, data, data_len);
+
 	kfree(data);
 
 	return NF_ACCEPT;
@@ -116,7 +142,7 @@ unsigned int nf_hookfn_out(void *priv,
 
 	//pre padding allocate
 	data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
-	padding_len = paddingFill(data_len);
+	padding_len = padding_fill(data_len);
 	data = kmalloc((data_len+padding_len) * sizeof(char), GFP_KERNEL);
 	memset(data, 0, (data_len+padding_len));//padding with 0
 	data[data_len + padding_len - 1] = padding_len;//ANSI X.923 format
@@ -129,7 +155,13 @@ unsigned int nf_hookfn_out(void *priv,
 	/* Encryption function */
 	aes_crypto_cipher(data, data_len, ENCRYPTION);
 
+	/* substitute original data */
+	skb_put(skb, padding_len);//forward from tail
 	memcpy(data_origin, data, data_len);
+	//re-checksum for IP segment
+	iph->tot_len = htons(ntohs(iph->tot_len) + padding_len);//'total length' segment in IP
+	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum
+
 	kfree(data);
 
 	return NF_ACCEPT;

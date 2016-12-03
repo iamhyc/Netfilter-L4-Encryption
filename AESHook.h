@@ -5,6 +5,7 @@
 #define destIP "127.0.0.0"
 
 void printkHex(char *, int, int, char*);
-char paddingFill(int);
+char padding_fill(int);
+char padding_check(char *, int);
 
 #endif
