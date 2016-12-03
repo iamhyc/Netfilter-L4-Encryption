@@ -56,7 +56,7 @@ char padding_check(char * data, int len)
 	int flag = 0, i = 0;
 
 	ex = data[len - 1];
-	for (i = 0; i < ex; i++)
+	for (i = 1; i < ex; i++)
 	{
 		flag += data[len - i - 1];
 	}
@@ -96,20 +96,23 @@ unsigned int nf_hookfn_in(void *priv,
 	//Get Original L3 payload, Extract data from payload
 	data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
 	data_origin = skb->head + skb->network_header + iph->ihl * 4;
-	//printkHex(data_origin, data_len, 0, "ORIGIN\tINPUT");
+	printkHex(data_origin, data_len, 0, "ORIGIN\tINPUT");
 	/* Decryption function */
 	aes_crypto_cipher(data_origin, data_len, DECRYPTION);
+	printkHex(data_origin, data_len, 0, "DECRYPT\tINPUT");
 
-	//allocate memory for data without padding
-	padding_len = padding_check(data_origin, data_len);
-	data = kmalloc((data_len - padding_len) * sizeof(char), GFP_KERNEL);
-	memcpy(data, data_origin, (data_len - padding_len));
+	//resemble data structure without padding
+	//data = kmalloc((data_len - padding_len) * sizeof(char), GFP_KERNEL);
+	//memcpy(data, data_origin, (data_len - padding_len));
+	//memset(data_origin, 0, data_len);
+	//memcpy(data_origin, data, (data_len - padding_len));
+	//kfree(data);
+
 	//re-checksum for IP header
+	padding_len = padding_check(data_origin, data_len);
 	iph->tot_len = htons(ntohs(iph->tot_len) - padding_len);//remove padding from length
 	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum
-	memcpy(data_origin, data, data_len);
-
-	kfree(data);
+	printkHex(data_origin, data_len, -padding_len, "FINAL\tINPUT");
 
 	return NF_ACCEPT;
 }
@@ -150,14 +153,14 @@ unsigned int nf_hookfn_out(void *priv,
 	//Get Original L3 payload
 	data_origin = skb->head + skb->network_header + iph->ihl * 4;
 	memcpy(data, data_origin, data_len);
-	printkHex(data, data_len, padding_len, "ORIGIN\tOUTPUT");
+	printkHex(data, data_len, padding_len, "PADDING\tOUTPUT");
 
 	/* Encryption function */
-	aes_crypto_cipher(data, data_len, ENCRYPTION);
-
+	aes_crypto_cipher(data, (data_len+padding_len), ENCRYPTION);
+	printkHex(data, data_len, padding_len, "ENCRYPT\tOUTPUT");
 	/* substitute original data */
 	skb_put(skb, padding_len);//forward from tail
-	memcpy(data_origin, data, data_len);
+	memcpy(data_origin, data, (data_len+padding_len));
 	//re-checksum for IP segment
 	iph->tot_len = htons(ntohs(iph->tot_len) + padding_len);//'total length' segment in IP
 	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum
@@ -174,7 +177,7 @@ unsigned int nf_hookfn_out(void *priv,
 void printkHex(char *data, int data_len, int padding_len, char* pt_mark) {
 	int i = 0;
 	printk("[%s]length=%d:%d;Data Content: ", pt_mark, data_len, padding_len);
-	for (i = 0; i < data_len; i ++) {
+	for (i = 0; i < (data_len+padding_len); i ++) {
 		printk("%02x ", data[i] & 0xFF);
 	}
 	printk("\n");
