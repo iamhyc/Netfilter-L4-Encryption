@@ -36,7 +36,7 @@ static struct nf_hook_ops nfhk_local_out;
   * @param  
   * @retval 
   */
-char padding_ill(int data_len) {
+char padding_fill(int data_len) {
 	char tmp_len = 0;
 
 	tmp_len = data_len % 16;
