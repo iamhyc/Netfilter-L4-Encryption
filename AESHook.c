@@ -17,6 +17,7 @@
 #include <linux/ip.h>
 #include <linux/tcp.h>
 #include <linux/icmp.h>
+#include <linux/inet.h>
 //User Reference
 #include "AESHook.h"
 #include "aes_method.h"
