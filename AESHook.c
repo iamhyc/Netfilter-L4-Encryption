@@ -92,20 +92,17 @@ unsigned int nf_hookfn_in(void *priv,
 		return NF_ACCEPT;
 	}
 
+	if(iph->saddr != in_aton(DEST_IP)) {
+		return NF_ACCEPT;
+	}
+
 	//Get Original L3 payload, Extract data from payload
 	data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
 	data_origin = skb->head + skb->network_header + iph->ihl * 4;
-	printkHex(data_origin, data_len, 0, "ORIGIN\tINPUT");
+	//printkHex(data_origin, data_len, 0, "ORIGIN\tINPUT");
 	/* Decryption function */
 	aes_crypto_cipher(data_origin, data_len, DECRYPTION);
-	printkHex(data_origin, data_len, 0, "DECRYPT\tINPUT");
-
-	//resemble data structure without padding
-	//data = kmalloc((data_len - padding_len) * sizeof(char), GFP_KERNEL);
-	//memcpy(data, data_origin, (data_len - padding_len));
-	//memset(data_origin, 0, data_len);
-	//memcpy(data_origin, data, (data_len - padding_len));
-	//kfree(data);
+	//printkHex(data_origin, data_len, 0, "DECRYPT\tINPUT");
 
 	//re-checksum
 	padding_len = padding_check(data_origin, data_len);
@@ -143,6 +140,10 @@ unsigned int nf_hookfn_out(void *priv,
 		return NF_ACCEPT;
 	}
 
+	if(iph->daddr != in_aton(DEST_IP)) {
+		return NF_ACCEPT;
+	}
+
 	//pre padding allocate
 	data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
 	padding_len = padding_fill(data_len);
@@ -153,7 +154,7 @@ unsigned int nf_hookfn_out(void *priv,
 	//Get Original L3 payload
 	data_origin = skb->head + skb->network_header + iph->ihl * 4;
 	memcpy(data, data_origin, data_len);
-	printkHex(data, data_len, padding_len, "PADDING\tOUTPUT");
+	//printkHex(data, data_len, padding_len, "PADDING\tOUTPUT");
 
 	/* Encryption function */
 	aes_crypto_cipher(data, (data_len+padding_len), ENCRYPTION);
@@ -163,10 +164,10 @@ unsigned int nf_hookfn_out(void *priv,
 	memcpy(data_origin, data, (data_len+padding_len));
 	//re-checksum
 	iph->tot_len = htons(ntohs(iph->tot_len) + padding_len);//'total length' segment in IP
-	printk("ip_csum_0:%02x\n", iph->check);
+	//printk("ip_csum_0:%02x\n", iph->check);
 	iph->check = 0;
 	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum for IP
-	printk("ip_csum_1:%02x\n", iph->check);
+	//printk("ip_csum_1:%02x\n", iph->check);
 	skb->csum = 0;
 	skb->csum = skb_checksum(skb, iph->ihl*4, skb->len - iph->ihl * 4, 0);//re-checksum for skb
 	kfree(data);

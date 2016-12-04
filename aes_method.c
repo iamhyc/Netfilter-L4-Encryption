@@ -19,7 +19,7 @@ static void test_skcipher_cb(struct crypto_async_request *req, int error)
 		return;
 	result->err = error;
 	complete(&result->completion);
-	pr_info("Encryption finished successfully\n");
+	//pr_info("Encryption finished successfully\n");
 }
 
 /* Perform cipher operation */
@@ -45,7 +45,7 @@ static unsigned int test_skcipher_encdec(struct skcipher_def *sk,
 			break;
 		}
 	default:
-		pr_info("skcipher encrypt returned with %d result %d\n",
+		//pr_info("skcipher encrypt returned with %d result %d\n", \
 			rc, sk->result.err);
 		break;
 	}
