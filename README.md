@@ -25,12 +25,10 @@ Source Address of Header of L3
 
 ##TODO
 
-+ Asynchronous encyrption adding *waitting completion*
-
-+ Encryption verified, *skb_push* verified
-
-+ IPv4 checksum re-calculate
-
-+ Decryption suite
-
-+ IP Allow List && Changable AES_KEY
++ [x] Asynchronous encyrption adding *waitting completion*
++ [x] Encryption verified, *skb_put* verified
++ [x] IPv4 checksum re-calculate
++ [x] Decryption suite
++ [ ] **Changable AES_KEY** from User Space Netlink Comm.
++ [ ] Allowed IP list,  **CRUD** by **Netlink** and **File Fetch**
++ [ ] Exchange IP list with pre-defined **ICMP message**
