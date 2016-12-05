@@ -18,6 +18,15 @@
 #include <linux/tcp.h>
 #include <linux/icmp.h>
 #include <linux/inet.h>
+//Netlink Communication
+#include <linux/netdevice.h>
+#include <linux/in.h>
+#include <linux/netlink.h>
+#include <linux/spinlock.h>
+#include <asm/semaphore.h>
+#include <net/sock.h>
+
+DECLARE_MUTEX(receive_sem);
 //User Reference
 #include "AESHook.h"
 #include "aes_method.h"
