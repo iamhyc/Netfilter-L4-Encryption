@@ -26,7 +26,7 @@
 #include <asm/semaphore.h>
 #include <net/sock.h>
 
-DECLARE_MUTEX(receive_sem);
+DEFINE_SEMAPHORE(receive_sem);
 //User Reference
 #include "AESHook.h"
 #include "aes_method.h"
