@@ -18,18 +18,10 @@
 #include <linux/tcp.h>
 #include <linux/icmp.h>
 #include <linux/inet.h>
-//Netlink Communication
-#include <linux/netdevice.h>
-#include <linux/in.h>
-#include <linux/netlink.h>
-#include <linux/spinlock.h>
-#include <asm/semaphore.h>
-#include <net/sock.h>
-
-DEFINE_SEMAPHORE(receive_sem);
 //User Reference
 #include "AESHook.h"
-#include "aes_method.h"
+#include "aes_method.h"//kernel aes_cbc_256
+//#include "netlink_com.h"//kernel Connector driver
 #include <linux/string.h>
 #include <linux/kmod.h>
 
@@ -44,7 +36,7 @@ static struct nf_hook_ops nfhk_local_out;
 /**
   * @brief  
   * @param  
-  * @retval 
+  * @retval
   */
 char padding_fill(int data_len) {
 	char tmp_len = 0;
@@ -102,7 +94,7 @@ unsigned int nf_hookfn_in(void *priv,
 		return NF_ACCEPT;
 	}
 
-	if(iph->saddr != in_aton(DEST_IP)) {
+	if((iph->saddr != in_aton(REMOTE_IP)) || iph->daddr != in_aton(LOCAL_IP)) {
 		return NF_ACCEPT;
 	}
 
@@ -116,6 +108,10 @@ unsigned int nf_hookfn_in(void *priv,
 
 	//re-checksum
 	padding_len = padding_check(data_origin, data_len);
+	{
+		skb->tail -= padding_len;
+		skb->len  -= padding_len;
+	}
 	iph->tot_len = htons(ntohs(iph->tot_len) - padding_len);//remove padding from length
 	iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum for IP
 	skb->csum = skb_checksum(skb, iph->ihl*4, skb->len - iph->ihl * 4, 0);//re-checksum for skb
@@ -150,7 +146,7 @@ unsigned int nf_hookfn_out(void *priv,
 		return NF_ACCEPT;
 	}
 
-	if(iph->daddr != in_aton(DEST_IP)) {
+	if((iph->saddr != in_aton(LOCAL_IP)) || iph->daddr != in_aton(REMOTE_IP)) {
 		return NF_ACCEPT;
 	}
 
@@ -164,7 +160,7 @@ unsigned int nf_hookfn_out(void *priv,
 	//Get Original L3 payload
 	data_origin = skb->head + skb->network_header + iph->ihl * 4;
 	memcpy(data, data_origin, data_len);
-	//printkHex(data, data_len, padding_len, "PADDING\tOUTPUT");
+	printkHex(data, data_len, padding_len, "PADDING\tOUTPUT");
 
 	/* Encryption function */
 	aes_crypto_cipher(data, (data_len+padding_len), ENCRYPTION);
@@ -219,12 +215,19 @@ static int init(void)
 
 	ret = nf_register_hook(&nfhk_local_in);
 	if (ret < 0) {
-        printk("Register ERROR\n");
+        printk("LOCAL_IN Register Error\n");
         return ret;
     }
+
 	ret = nf_register_hook(&nfhk_local_out);
 	if (ret < 0) {
-        printk("Register ERROR\n");
+        printk("LOCAL_OUT Register Error\n");
+        return ret;
+    }
+
+    //ret = netlink_init();
+    if (ret < 0) {
+    	printk("NETLINK Create Error\n");
         return ret;
     }
 
@@ -236,9 +239,9 @@ static int init(void)
   */
 static void fini(void)
 {
+	//netlink_fini();
 	nf_unregister_hook(&nfhk_local_in);
 	nf_unregister_hook(&nfhk_local_out);
-
 	printk("AES kexec exit ...\n");
 }
 

@@ -1,7 +1,7 @@
 # AES Hook Makefile
 ifneq ($(KERNELRELEASE),)
 	obj-m := AESHookMod.o
-	AESHookMod-objs := AESHook.o aes_method.o netlink_com.o
+	AESHookMod-objs := AESHook.o aes_method.o #netlink_com.o
 else
 	PWD := $(shell pwd)
 	KDIR := /lib/modules/$(shell uname -r)/build
