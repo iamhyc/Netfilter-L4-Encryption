@@ -58,6 +58,9 @@ char padding_check(char * data, int len)
 	int flag = 0, i = 0;
 
 	ex = data[len - 1];
+	if (ex < 1 || ex > 15)
+		return 0;
+
 	for (i = 1; i < ex; i++)
 	{
 		flag += data[len - i - 1];
