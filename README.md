@@ -1,12 +1,12 @@
+For Windows platform network encryption, please refer to this cool stuff [tcpcrypt](http://tcpcrypt.org/).
 
-
-##Introduction
+## Introduction
 
 This is a project trying to encrypt **Payload of L3** with *Symmetrical  encryption* on *Netfilter subsystem* of Linux.
 
 Just imagining that the routers could not know what you are actually transmitting, on which protol with what content.
 
-##Method
+## Method
 
 Source Address of Header of L3
 
@@ -23,7 +23,7 @@ Source Address of Header of L3
 
 4. kernel supported *linux/crypto.h* for encryption
 
-##TODO
+## TODO
 
 + [x] Asynchronous encyrption adding *waitting completion*
 + [x] Encryption verified, *skb_put* verified
