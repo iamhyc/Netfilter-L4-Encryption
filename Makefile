@@ -14,7 +14,7 @@ build-krn:
 	$(MAKE) -C $(KDIR) M=$(PWD)
 
 build-usr:
-	@echo "Not found userspace program"
+	@echo "ERROR: No Userspace Program Found."
 
 install:
 	cp -f $(MOD).ko /lib/modules/$(shell uname -r)

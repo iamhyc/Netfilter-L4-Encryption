@@ -18,7 +18,7 @@ Just imagine that the intermediate routers could not know what you are actually 
 + [x] ~~Encryption verified, *skb_put* verified~~
 + [x] ~~IPv4 checksum re-calculate~~
 + [x] ~~Decryption suite~~
-+ [ ] Mod&Fix to suit 4.14+ kernel
++ [x] Mod&Fix to suit 4.14+ kernel
 + [ ] use **genl** for dynamic AES_KEY from userspace
 + [ ] update encryption implementation
 + [ ] use **genl** for dynamic ALLOWED_ADDRESS_LIST from userspace
