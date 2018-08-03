@@ -1,16 +1,26 @@
-# AES Hook Makefile
+
+MOD=AESHookMod
+
 ifneq ($(KERNELRELEASE),)
-	obj-m := AESHookMod.o
-	AESHookMod-objs := AESHook.o aes_method.o #netlink_com.o
+	obj-m := $(MOD).o
+	$(MOD)-objs := AESHook.o aes_method.o
 else
 	PWD := $(shell pwd)
 	KDIR := /lib/modules/$(shell uname -r)/build
 
-all:
+all:build-krn build-usr
+
+build-krn:
 	$(MAKE) -C $(KDIR) M=$(PWD)
 
+build-usr:
+	@echo "Not found userspace program"
+
+install:
+	cp -f $(MOD).ko /lib/modules/$(shell uname -r)
+
 clean:
-	rm -f .built-in.o.cmd .aes_method.o.cmd .netlink_com.o.cmd .AESHook*
+	rm -f .cache.mk .*.cmd
 	rm -f *.o *.o.cmd *.ko *.mod.c *.symvers *.order
 	rm -rf .tmp_versions
 endif

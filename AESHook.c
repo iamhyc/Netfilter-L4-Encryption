@@ -11,72 +11,39 @@
 #include <linux/types.h>
 #include <linux/version.h>
 //Network Reference
+#include <linux/inetdevice.h>
 #include <linux/skbuff.h>
 #include <linux/netfilter.h>
 #include <linux/netfilter_ipv4.h>
 #include <linux/ip.h>
 #include <linux/tcp.h>
+#include <linux/udp.h>
 #include <linux/icmp.h>
 #include <linux/inet.h>
+#include <net/ip.h>
+#include <net/tcp.h>
 //User Reference
-#include "AESHook.h"
-#include "aes_method.h"//kernel aes_cbc_256
-//#include "netlink_com.h"//kernel Connector driver
 #include <linux/string.h>
-#include <linux/kmod.h>
 
-/* Module Definition ---------------------------------------------------------*/
-MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Mark-PC");
+#include "AESHook.h"
+#include "aes_method.h" //kernel aes_cbc_256
 
-/* Private function prototypes -----------------------------------------------*/
-static struct nf_hook_ops nfhk_local_in;
-static struct nf_hook_ops nfhk_local_out;
-
-/**
-  * @brief  
-  * @param  
-  * @retval
-  */
-char padding_fill(int data_len) {
-	char tmp_len = 0;
-
-	tmp_len = data_len % 16;
-	tmp_len = (tmp_len==0?0:16-tmp_len);
-
-	return tmp_len;
-}
-
-/**
-  * @brief  
-  * @param  
-  * @retval 
-  */
-char padding_check(char * data, int len)
+static struct nf_hook_ops nfhk_local_in = 
 {
-	char ex;
-	int flag = 0, i = 0;
+	.hook = nf_hookfn_in,
+	.pf = PF_INET,
+	.hooknum = NF_INET_LOCAL_IN,
+	.priority = NF_IP_PRI_FIRST
+};
 
-	ex = data[len - 1];
-	if (ex < 1 || ex > 15)
-		return 0;
+static struct nf_hook_ops nfhk_local_out =
+{
+	.hook = nf_hookfn_out,
+	.pf = PF_INET,
+	.hooknum = NF_INET_LOCAL_OUT,
+	.priority = NF_IP_PRI_LAST
+};
 
-	for (i = 1; i < ex; i++)
-	{
-		flag += data[len - i - 1];
-	}
-
-	if(flag==0)
-		return ex;
-	else
-		return 0;
-}
-
-/**
-  * @brief  
-  * @param  
-  * @retval uint16_t, the length of '*data' pointer(in bit)
-  */
 unsigned int nf_hookfn_in(void *priv,
 			       struct sk_buff *skb,
 			       const struct nf_hook_state *state)
@@ -123,11 +90,6 @@ unsigned int nf_hookfn_in(void *priv,
 	return NF_ACCEPT;
 }
 
-/**
-  * @brief  
-  * @param  
-  * @retval uint16_t, the length of '*data' pointer(in bit)
-  */
 unsigned int nf_hookfn_out(void *priv,
 			       struct sk_buff *skb,
 			       const struct nf_hook_state *state)
@@ -197,56 +159,34 @@ void printkHex(char *data, int data_len, int padding_len, char* pt_mark) {
 	printk("\n");
 }
 
-/**
-  * @brief  module init function
-  */
 static int init(void)
 {
 	unsigned int ret;
 
-	printk("AES kexec start ...\n");
-	//NF_LOCAL_IN HOOK struct
-	nfhk_local_in.hook = nf_hookfn_in;
-	nfhk_local_in.pf = PF_INET;
-	nfhk_local_in.hooknum = NF_INET_LOCAL_IN;
-	nfhk_local_in.priority = NF_IP_PRI_FIRST;
-	//NF_LOCAL_OUT HOOK struct
-	nfhk_local_out.hook = nf_hookfn_out;
-	nfhk_local_out.pf = PF_INET;
-	nfhk_local_out.hooknum = NF_INET_LOCAL_OUT;
-	nfhk_local_out.priority = NF_IP_PRI_LAST;
-
-	ret = nf_register_hook(&nfhk_local_in);
+	ret = nf_register_net_hook(&init_net, &nfhk_local_in);
 	if (ret < 0) {
         printk("LOCAL_IN Register Error\n");
         return ret;
     }
 
-	ret = nf_register_hook(&nfhk_local_out);
+	ret = nf_register_net_hook(&init_net, &nfhk_local_out);
 	if (ret < 0) {
         printk("LOCAL_OUT Register Error\n");
         return ret;
     }
 
-    //ret = netlink_init();
-    if (ret < 0) {
-    	printk("NETLINK Create Error\n");
-        return ret;
-    }
-
+    printk("AES kexec start ...\n");
 	return 0;
 }
 
-/**
-  * @brief  module exit callback function
-  */
 static void fini(void)
 {
-	//netlink_fini();
-	nf_unregister_hook(&nfhk_local_in);
-	nf_unregister_hook(&nfhk_local_out);
+	nf_register_net_hook(&init_net, &nfhk_local_in);
+	nf_register_net_hook(&init_net, &nfhk_local_out);
 	printk("AES kexec exit ...\n");
 }
 
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Mark-PC");
 module_init(init);
 module_exit(fini);
