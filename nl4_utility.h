@@ -11,7 +11,7 @@
 
 #define ENCRYPTION	0x1
 #define DECRYPTION	0x0
-#define COMP_LENGTH(x) ((16-x%16)&0x00FF)
+#define COMP_LENGTH(x) ((16-x%16)&0x0F)
 
 #define INBOUND     0x0
 #define OUTBOUND    0x1

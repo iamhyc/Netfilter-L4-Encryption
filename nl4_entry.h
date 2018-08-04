@@ -41,17 +41,31 @@ void dumpTCP(const char* key, struct iphdr *iph)
             tcph->syn, tcph->ack, tcph->fin, tcph->rst, tcph->psh);
 }
 
-/**
-  * @brief  print in kernel with Hex data
-  * @param  (char *)data pointer, (int)data length, (char *)description of data
-  */
-void printkHex(char *data, int data_len, int padding_len, char* pt_mark) {
-	int i = 0;
-	printk("[%s]length=%d:%d;Data Content: ", pt_mark, data_len, padding_len);
-	for (i = 0; i < (data_len+padding_len); i ++) {
-		printk("%02x ", data[i] & 0xFF);
-	}
-	printk("\n");
+void hexDump(char *data, int len, int bound) {
+	int cnt = 0;
+    char *buffer, *ptr;
+    buffer = kmalloc(4096 * sizeof(char), GFP_KERNEL);
+    ptr = buffer;
+
+    while(cnt < len)
+    {
+        sprintf(ptr, "%02x ", data[cnt]&0xFF);
+        ptr += 3;
+        ++ cnt;
+
+        if(cnt%20==0)
+        {
+            sprintf(ptr, "\n");
+            ++ptr;
+        }
+    }
+
+    if(bound==INBOUND)
+	    printk("[INBOUND]\n%s\n", buffer);
+    else
+        printk("[OUTBOUND]\n%s\n", buffer);
+
+    kfree(buffer);
 }
 
 unsigned int nf_hookfn_in(void *, struct sk_buff *, const struct nf_hook_state *);

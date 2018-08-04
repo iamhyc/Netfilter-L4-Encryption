@@ -22,7 +22,7 @@ char get_comp_length(char * data, int len)
 	int i = 0;
 
 	ex = data[len - 1]; //the last element
-	if ( (ex&0x00FF) == 0)
+	if ( (ex&0x0F) == 0)
 		return 0;
 
 	for (i = 1; i < ex; i++)

@@ -38,7 +38,7 @@ static struct nf_hook_ops nfhk_local_out =
 	.hook = nf_hookfn_out,
 	.pf = PF_INET,
 	.hooknum = NF_INET_LOCAL_OUT,
-	.priority = NF_IP_PRI_LAST
+	.priority = NF_IP_PRI_FIRST
 };
 
 int remoteAllowed(struct iphdr *iph, int bound)
@@ -56,7 +56,7 @@ unsigned int nf_hookfn_in(void *priv,
 {
 	__u16 data_len;
 	char padding_len;
-	char* data_origin;
+	char* payload;
 	struct iphdr *iph = NULL;
     // struct tcphdr *tcph = NULL;
 
@@ -68,21 +68,24 @@ unsigned int nf_hookfn_in(void *priv,
 
 	if(iph!=NULL && remoteAllowed(iph, INBOUND))
 	{
-		//NOTE: Get Original L3 payload, Extract data from payload
+		//a. extract cipher payload
 		data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
-		data_origin = skb->head + skb->network_header + iph->ihl * 4;
+		payload = (char *)iph + iph->ihl * 4;
 
-		//NOTE: Decryption function
-		aes_crypto_cipher(data_origin, data_len, DECRYPTION);
+		//b. decrypt the cipher
+		aes_crypto_cipher(payload, data_len, DECRYPTION);
+		padding_len = get_comp_length(payload, data_len);
+		if(padding_len)
+		{
+			printk("has padding\n");
+			skb_trim(skb, skb->len - padding_len);
+			// skb->tail -= padding_len; skb->len  -= padding_len;
+			iph->tot_len = htons(ntohs(iph->tot_len) - padding_len);
+		}
 
-		//NOTE: re-checksum
-		padding_len = get_comp_length(data_origin, data_len);
-		skb->tail -= padding_len; skb->len  -= padding_len;
-		iph->tot_len = htons(ntohs(iph->tot_len) - padding_len);//remove padding from length
-		iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum for IP
-		skb->csum = skb_checksum(skb, iph->ihl*4, skb->len - iph->ihl * 4, 0);//re-checksum for skb
-		printk("[INBOUND] prot: %d, len: %d", iph->protocol, htons(iph->tot_len));
-		// printkHex(data_origin, data_len, -padding_len, "FINAL\tINPUT");
+		//c. re-checksum for iph
+		iph->check = 0;
+		iph->check = ip_fast_csum(iph, iph->ihl);
 	}
 
 	return NF_ACCEPT;
@@ -92,10 +95,9 @@ unsigned int nf_hookfn_out(void *priv,
 			       struct sk_buff *skb,
 			       const struct nf_hook_state *state)
 {
-	__u16 data_len;
+	__u16 payload_len;
 	char padding_len;
-	char *data = NULL;
-	char* data_origin;
+	char* payload;
 	struct iphdr *iph = NULL;
 	// struct tcphdr *tcph = NULL;
 
@@ -107,31 +109,24 @@ unsigned int nf_hookfn_out(void *priv,
 
 	if(iph!=NULL && remoteAllowed(iph, OUTBOUND))
 	{
-		printk("[OUTBOUND] prot: %d, len: %d", iph->protocol, htons(iph->tot_len));
-		//NOTE: pre padding allocate
-		data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
-		padding_len = COMP_LENGTH(data_len);
-		data = kmalloc((data_len+padding_len) * sizeof(char), GFP_KERNEL);
-		memset(data, 0, (data_len+padding_len));//padding with 0
-		data[data_len + padding_len - 1] = padding_len;//ANSI X.923 format
+		//a. padding, expand from tailroom
+		payload_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
+		padding_len = COMP_LENGTH(payload_len);
 
-		//NOTE: Get Original L3 payload
-		data_origin = skb->head + skb->network_header + iph->ihl * 4;
-		memcpy(data, data_origin, data_len);
+		//b. encrypt the payload
+		payload = (char *)iph + iph->ihl*4;
+		if(padding_len)
+		{
+			skb_put(skb, padding_len);
+			memset((char *)(payload+payload_len), 0, padding_len);
+			payload[payload_len + padding_len - 1] = padding_len;//ANSI X.923 format
+		}
+		aes_crypto_cipher(payload, (payload_len+padding_len), ENCRYPTION);
 
-		//NOTE: Encryption function
-		aes_crypto_cipher(data, (data_len+padding_len), ENCRYPTION);
-		skb_put(skb, padding_len);//forward from tail
-		memcpy(data_origin, data, (data_len+padding_len));
-
-		//NOTE: re-checksum
-		iph->tot_len = htons(ntohs(iph->tot_len) + padding_len);//'total length' segment in IP
+		//c. re-checksum for iph
+		iph->tot_len = htons(ntohs(iph->tot_len) + padding_len);
 		iph->check = 0;
-		iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum for IP
-		skb->csum = 0;
-		skb->csum = skb_checksum(skb, iph->ihl*4, skb->len - iph->ihl * 4, 0);//re-checksum for skb
-
-		kfree(data);
+		iph->check = ip_fast_csum(iph, iph->ihl);
 	}
 
 	return NF_ACCEPT;
