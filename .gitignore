@@ -1,5 +1,6 @@
 .vscode
 .tmp_versions
+.cache.mk
 .*.o.cmd
 .*.ko.cmd
 *.mod.c

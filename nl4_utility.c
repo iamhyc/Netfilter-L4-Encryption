@@ -1,10 +1,35 @@
 
 #include <linux/string.h>
-#include "aes_method.h"
+#include "nl4_utility.h"
 
-/*
+char padding_fill(int data_len) {
+	char tmp_len = 0;
 
-*/
+	tmp_len = data_len % 16;
+	tmp_len = (tmp_len==0?0:16-tmp_len);
+
+	return tmp_len;
+}
+
+char padding_check(char * data, int len)
+{
+	char ex;
+	int flag = 0, i = 0;
+
+	ex = data[len - 1];
+	if (ex < 1 || ex > 15)
+		return 0;
+
+	for (i = 1; i < ex; i++)
+	{
+		flag += data[len - i - 1];
+	}
+
+	if(flag==0)
+		return ex;
+	else
+		return 0;
+}
 
 /***************proto define***************/
 static unsigned int test_skcipher_encdec(struct skcipher_def *sk, int enc);

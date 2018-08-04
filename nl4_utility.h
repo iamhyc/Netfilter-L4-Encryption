@@ -1,5 +1,5 @@
-#ifndef __AES_METHOD_H
-#define __AES_METHOD_H
+#ifndef __NL4_UTILITY_H__
+#define __NL4_UTILITY_H__
 
 #define ENCRYPTION 0x1
 #define DECRYPTION 0x0
@@ -23,6 +23,9 @@ struct skcipher_def {
 	struct skcipher_request *req;
 	struct tcrypt_result result;
 };
+
+char padding_fill(int data_len);
+char padding_check(char * data, int len);
 
 int aes_crypto_cipher(char *, __u16, int);
 

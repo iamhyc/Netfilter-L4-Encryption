@@ -1,9 +1,9 @@
 
-MOD=AESHookMod
+MOD=nl4_bypass
 
 ifneq ($(KERNELRELEASE),)
 	obj-m := $(MOD).o
-	$(MOD)-objs := AESHook.o aes_method.o
+	$(MOD)-objs := nl4_entry.o nl4_utility.o
 else
 	PWD := $(shell pwd)
 	KDIR := /lib/modules/$(shell uname -r)/build
@@ -18,6 +18,12 @@ build-usr:
 
 install:
 	cp -f $(MOD).ko /lib/modules/$(shell uname -r)
+
+insmod:
+	sudo insmod $(MOD).ko
+
+rmmod:
+	sudo rmmod $(MOD)
 
 clean:
 	rm -f .cache.mk .*.cmd
