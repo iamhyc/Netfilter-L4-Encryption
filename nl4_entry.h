@@ -1,34 +1,10 @@
 #ifndef __NL4_ENTRY_H__
 #define __NL4_ENTRY_H__
 
+#include <linux/string.h>
+#include "nl4_utility.h" //kernel aes_cbc_256
+
 #define REMOTE_IP "127.0.0.1" //FIXME:rewrite to list (with addr mask)
-
-#define INBOUND     0
-#define OUTBOUND    1
-
-#define IPV4A(x)   ((u8 *)x)[0]
-#define IPV4B(x)   ((u8 *)x)[1]
-#define IPV4C(x)   ((u8 *)x)[2]
-#define IPV4D(x)   ((u8 *)x)[3]
-
-#define GET_PPDST(iph)  (__be16 *)((char *)iph + iph->ihl*4 + 2)
-#define GET_PDST(iph)   ntohs(*GET_PPDST(iph))
-#define GET_PPSRC(iph)  (__be16 *)((char *)iph + iph->ihl*4 + 4)
-#define GET_PSRC(iph)   ntohs(*GET_PPSRC(iph))
-
-u32 IP2NUM(const char *addr)
-{
-    u8 num[4];
-    int a,b,c,d;
-    sscanf(addr, "%d.%d.%d.%d", &a,&b,&c,&d);
-    num[0]=a; num[1]=b; num[2]=c; num[3]=d;
-    return *(u32 *)num;
-}
-
-inline void NUM2IP(u32 addr, char *str)
-{
-    snprintf(str, 16, "%pI4", &addr);
-}
 
 u32 getIfAddr(const char *if_name)
 {

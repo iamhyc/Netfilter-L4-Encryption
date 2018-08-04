@@ -2,33 +2,36 @@
 #include <linux/string.h>
 #include "nl4_utility.h"
 
-char padding_fill(int data_len) {
-	char tmp_len = 0;
-
-	tmp_len = data_len % 16;
-	tmp_len = (tmp_len==0?0:16-tmp_len);
-
-	return tmp_len;
+u32 IP2NUM(const char *addr)
+{
+    u8 num[4];
+    int a,b,c,d;
+    sscanf(addr, "%d.%d.%d.%d", &a,&b,&c,&d);
+    num[0]=a; num[1]=b; num[2]=c; num[3]=d;
+    return *(u32 *)num;
 }
 
-char padding_check(char * data, int len)
+inline void NUM2IP(u32 addr, char *str)
+{
+    snprintf(str, 16, "%pI4", &addr);
+}
+
+char get_comp_length(char * data, int len)
 {
 	char ex;
-	int flag = 0, i = 0;
+	int i = 0;
 
-	ex = data[len - 1];
-	if (ex < 1 || ex > 15)
+	ex = data[len - 1]; //the last element
+	if ( (ex&0x00FF) == 0)
 		return 0;
 
 	for (i = 1; i < ex; i++)
 	{
-		flag += data[len - i - 1];
+		if (data[len-1 - i] != 0)
+			return 0;
 	}
 
-	if(flag==0)
-		return ex;
-	else
-		return 0;
+	return ex;
 }
 
 /***************proto define***************/

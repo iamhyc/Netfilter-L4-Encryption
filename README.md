@@ -19,7 +19,7 @@ Just imagine that the intermediate routers could not know what you are actually 
 + [x] ~~IPv4 checksum re-calculate~~
 + [x] ~~Decryption suite~~
 + [x] Mod&Fix to suit 4.14+ kernel
-+ [ ] use **genl** for dynamic AES_KEY from userspace
 + [ ] update encryption implementation
++ [ ] use **genl** for dynamic AES_KEY from userspace
 + [ ] use **genl** for dynamic ALLOWED_ADDRESS_LIST from userspace
 + [ ] Exchange Allowed IP List with Customed **ICMP** Message

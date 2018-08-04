@@ -21,9 +21,7 @@
 #include <net/ip.h>
 #include <net/tcp.h>
 
-#include <linux/string.h>
 #include "nl4_entry.h"
-#include "nl4_utility.h" //kernel aes_cbc_256
 
 static u32 remote_addr = 0;
 
@@ -73,19 +71,18 @@ unsigned int nf_hookfn_in(void *priv,
 		//NOTE: Get Original L3 payload, Extract data from payload
 		data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
 		data_origin = skb->head + skb->network_header + iph->ihl * 4;
-		//printkHex(data_origin, data_len, 0, "ORIGIN\tINPUT");
 
 		//NOTE: Decryption function
 		aes_crypto_cipher(data_origin, data_len, DECRYPTION);
-		//printkHex(data_origin, data_len, 0, "DECRYPT\tINPUT");
 
 		//NOTE: re-checksum
-		padding_len = padding_check(data_origin, data_len);
+		padding_len = get_comp_length(data_origin, data_len);
 		skb->tail -= padding_len; skb->len  -= padding_len;
 		iph->tot_len = htons(ntohs(iph->tot_len) - padding_len);//remove padding from length
 		iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum for IP
 		skb->csum = skb_checksum(skb, iph->ihl*4, skb->len - iph->ihl * 4, 0);//re-checksum for skb
-		//printkHex(data_origin, data_len, -padding_len, "FINAL\tINPUT");
+		printk("[INBOUND] prot: %d, len: %d", iph->protocol, htons(iph->tot_len));
+		// printkHex(data_origin, data_len, -padding_len, "FINAL\tINPUT");
 	}
 
 	return NF_ACCEPT;
@@ -110,9 +107,10 @@ unsigned int nf_hookfn_out(void *priv,
 
 	if(iph!=NULL && remoteAllowed(iph, OUTBOUND))
 	{
+		printk("[OUTBOUND] prot: %d, len: %d", iph->protocol, htons(iph->tot_len));
 		//NOTE: pre padding allocate
 		data_len = ntohs(iph->tot_len)  - sizeof(struct iphdr);
-		padding_len = padding_fill(data_len);
+		padding_len = COMP_LENGTH(data_len);
 		data = kmalloc((data_len+padding_len) * sizeof(char), GFP_KERNEL);
 		memset(data, 0, (data_len+padding_len));//padding with 0
 		data[data_len + padding_len - 1] = padding_len;//ANSI X.923 format
@@ -120,20 +118,16 @@ unsigned int nf_hookfn_out(void *priv,
 		//NOTE: Get Original L3 payload
 		data_origin = skb->head + skb->network_header + iph->ihl * 4;
 		memcpy(data, data_origin, data_len);
-		// printkHex(data, data_len, padding_len, "PADDING\tOUTPUT");
 
 		//NOTE: Encryption function
 		aes_crypto_cipher(data, (data_len+padding_len), ENCRYPTION);
-		printkHex(data, data_len, padding_len, "ENCRYPT\tOUTPUT");
 		skb_put(skb, padding_len);//forward from tail
 		memcpy(data_origin, data, (data_len+padding_len));
 
 		//NOTE: re-checksum
 		iph->tot_len = htons(ntohs(iph->tot_len) + padding_len);//'total length' segment in IP
-		//printk("ip_csum_0:%02x\n", iph->check);
 		iph->check = 0;
 		iph->check = ip_fast_csum((unsigned char *)iph, iph->ihl);//re-checksum for IP
-		//printk("ip_csum_1:%02x\n", iph->check);
 		skb->csum = 0;
 		skb->csum = skb_checksum(skb, iph->ihl*4, skb->len - iph->ihl * 4, 0);//re-checksum for skb
 
@@ -151,25 +145,25 @@ static int nl4_init(void)
 
 	ret = nf_register_net_hook(&init_net, &nfhk_local_in);
 	if (ret < 0) {
-        printk("LOCAL_IN Register Error\n");
+        printk("INBOUND Module Register Error.\n");
         return ret;
     }
 
 	ret = nf_register_net_hook(&init_net, &nfhk_local_out);
 	if (ret < 0) {
-        printk("LOCAL_OUT Register Error\n");
+        printk("OUTBOUND Moudle Register Error.\n");
         return ret;
     }
 
-    printk("AES kexec start ...\n");
+    printh("NL4 Suite Init ...\n");
 	return 0;
 }
 
 static void nl4_fini(void)
 {
-	nf_register_net_hook(&init_net, &nfhk_local_in);
-	nf_register_net_hook(&init_net, &nfhk_local_out);
-	printk("AES kexec exit ...\n");
+	nf_unregister_net_hook(&init_net, &nfhk_local_in);
+	nf_unregister_net_hook(&init_net, &nfhk_local_out);
+	printh("NL4 Suite Exit ...\n");
 }
 
 MODULE_LICENSE("GPL");
